@@ -8,7 +8,14 @@
 #ifndef INC_LABDAQ_ADC_H_
 #define INC_LABDAQ_ADC_H_
 
+#if __has_include("labdaq_config.h")
 #include "labdaq_config.h"
+#elif __has_include("../Config/labdaq_config.h")
+#include "../Config/labdaq_config.h"
+#elif __has_include("../../Config/labdaq_config.h")
+#include "../../Config/labdaq_config.h"
+#endif
+
 #include "stm32f4xx_hal.h"
 #include <stdint.h>
 #include <stdbool.h>

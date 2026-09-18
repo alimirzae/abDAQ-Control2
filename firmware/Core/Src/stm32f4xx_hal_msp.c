@@ -5,7 +5,13 @@
  ******************************************************************************
  */
 
+#if __has_include("main.h")
 #include "main.h"
+#elif __has_include("../Inc/main.h")
+#include "../Inc/main.h"
+#elif __has_include("../../Core/Inc/main.h")
+#include "../../Core/Inc/main.h"
+#endif
 
 void HAL_MspInit(void)
 {

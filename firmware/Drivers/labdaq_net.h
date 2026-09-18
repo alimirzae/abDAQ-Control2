@@ -10,9 +10,25 @@
 #ifndef INC_LABDAQ_NET_H_
 #define INC_LABDAQ_NET_H_
 
+#if __has_include("labdaq_config.h")
 #include "labdaq_config.h"
+#elif __has_include("../Config/labdaq_config.h")
+#include "../Config/labdaq_config.h"
+#elif __has_include("../../Config/labdaq_config.h")
+#include "../../Config/labdaq_config.h"
+#endif
+
+#if __has_include("labdaq_sampler.h")
 #include "labdaq_sampler.h"
+#elif __has_include("../Drivers/labdaq_sampler.h")
+#include "../Drivers/labdaq_sampler.h"
+#endif
+
+#if __has_include("labdaq_comm.h")
 #include "labdaq_comm.h"
+#elif __has_include("../Drivers/labdaq_comm.h")
+#include "../Drivers/labdaq_comm.h"
+#endif
 #include <stdint.h>
 #include <stdbool.h>
 

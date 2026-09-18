@@ -9,7 +9,14 @@
 #ifndef INC_LABDAQ_MUX16_H_
 #define INC_LABDAQ_MUX16_H_
 
+#if __has_include("labdaq_config.h")
 #include "labdaq_config.h"
+#elif __has_include("../Config/labdaq_config.h")
+#include "../Config/labdaq_config.h"
+#elif __has_include("../../Config/labdaq_config.h")
+#include "../../Config/labdaq_config.h"
+#endif
+
 #include <stdint.h>
 #include <stdbool.h>
 

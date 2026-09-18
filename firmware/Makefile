@@ -48,6 +48,9 @@ C_DEFS =  \
 
 # Includes
 C_INCLUDES =  \
+-ICore/Inc \
+-IDrivers \
+-IConfig \
 -Ifirmware/Core/Inc \
 -Ifirmware/Drivers \
 -Ifirmware/Config
