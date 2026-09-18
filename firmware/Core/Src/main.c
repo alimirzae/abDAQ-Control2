@@ -56,7 +56,7 @@ int main(void)
     HAL_Init();
     DEBUG_STAGE(2U);     /* HAL/SysTick initialized */
 
-    /* Configure a bring-up-safe 168 MHz clock from the internal 16 MHz HSI. */
+    /* Configure the board-reference bring-up clock: direct 16 MHz HSI, no PLL/HSE. */
     SystemClock_Config();
     DEBUG_STAGE(3U);     /* 168 MHz clock configured */
 
@@ -225,46 +225,41 @@ int main(void)
   */
 void SystemClock_Config(void)
 {
+    /* Board reference CubeMX project (blink1.ioc) runs SYSCLK directly
+     * from the internal 16 MHz HSI. For hardware bring-up, intentionally
+     * do not enable PLL/HSE here. This matches the known-good board sample
+     * and removes oscillator/PLL switching from the boot path.
+     */
+    g_debug_stage = 21U;
+
     RCC_OscInitTypeDef RCC_OscInitStruct = {0};
     RCC_ClkInitTypeDef RCC_ClkInitStruct = {0};
-
-    /* Bring-up-safe clock: use the STM32F407 internal 16 MHz HSI.
-     * This removes dependency on an unverified external crystal/oscillator
-     * while keeping the target 168 MHz system clock.
-     * PLL: 16 MHz / 16 * 336 / 2 = 168 MHz.
-     */
-    __HAL_RCC_PWR_CLK_ENABLE();
-    __HAL_PWR_VOLTAGESCALING_CONFIG(PWR_REGULATOR_VOLTAGE_SCALE1);
 
     RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSI;
     RCC_OscInitStruct.HSIState = RCC_HSI_ON;
     RCC_OscInitStruct.HSICalibrationValue = RCC_HSICALIBRATION_DEFAULT;
-    RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
-    RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSI;
-    RCC_OscInitStruct.PLL.PLLM = 16;
-    RCC_OscInitStruct.PLL.PLLN = 336;
-    RCC_OscInitStruct.PLL.PLLP = RCC_PLLP_DIV2;
-    RCC_OscInitStruct.PLL.PLLQ = 7;
+    RCC_OscInitStruct.PLL.PLLState = RCC_PLL_NONE;
 
-    g_debug_stage = 21U; /* entering oscillator/PLL configuration */
     if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK) {
         g_debug_error = 0xC101U;
         Error_Handler();
     }
-    g_debug_stage = 22U; /* HSI + PLL ready */
+    g_debug_stage = 22U;
 
     RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK | RCC_CLOCKTYPE_SYSCLK
                                 | RCC_CLOCKTYPE_PCLK1 | RCC_CLOCKTYPE_PCLK2;
-    RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK;
+    RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_HSI;
     RCC_ClkInitStruct.AHBCLKDivider = RCC_SYSCLK_DIV1;
-    RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV4;
-    RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV2;
+    RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV1;
+    RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV1;
 
-    if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_5) != HAL_OK) {
+    if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_0) != HAL_OK) {
         g_debug_error = 0xC102U;
         Error_Handler();
     }
-    g_debug_stage = 23U; /* SYSCLK switched to PLL */
+
+    SystemCoreClockUpdate();
+    g_debug_stage = 23U;
 }
 
 static void MX_USART1_UART_Init(void)
