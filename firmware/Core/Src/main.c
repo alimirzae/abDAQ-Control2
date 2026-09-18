@@ -16,6 +16,7 @@
 #include <stdio.h>
 #include <string.h>
 #include "labdaq_control.h"
+#include "labdaq_display.h"
 
 /* Global Master System Instance */
 labdaq_system_t g_labdaq;
@@ -58,6 +59,7 @@ int main(void)
     /* Initialize Communication Interfaces (RS485 DIR, etc.) */
     LABDAQ_Comm_Init(&g_labdaq);
     LABDAQ_Control_Init();
+    LABDAQ_Display_Init();
 
     /* Initialize Ethernet Network Stack (UDP Multicast/Unicast & Embedded HTTP Web Server) */
     LABDAQ_Net_Init(&g_labdaq);
@@ -87,6 +89,7 @@ int main(void)
         /* 1. Periodic DAQ Task & Cyclic Test Controller update */
         LABDAQ_System_Task(&g_labdaq);
         LABDAQ_Control_Task(&g_labdaq);
+        LABDAQ_Display_Task(&g_labdaq);
 
         /* 2. Step round-robin analog scanning if running in software-stepped mode */
         if (now - last_sync_step >= 1) {
@@ -137,6 +140,14 @@ int main(void)
             }
             modbus_rx_idx = 0;
         }
+
+        /* Local HMI PAGE button: PA0, debounced in display module. */
+        static GPIO_PinState last_page_button = GPIO_PIN_RESET;
+        GPIO_PinState page_button = HAL_GPIO_ReadPin(LABDAQ_BTN_PORT, LABDAQ_BTN_PIN);
+        if (page_button == GPIO_PIN_SET && last_page_button == GPIO_PIN_RESET) {
+            LABDAQ_Display_ButtonEvent();
+        }
+        last_page_button = page_button;
 
         /* 5. Heartbeat LED Blink (every 500ms) */
         if (now - last_status_blink >= 500) {
