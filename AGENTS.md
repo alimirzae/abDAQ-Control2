@@ -78,3 +78,10 @@ Any modifications or extensions to the digital signal conditioning pipeline in `
 - Every sensor channel has a human name, engineering unit, gain and offset. Test records must reference calibration metadata.
 - Network/UI work must never block the acquisition/PID hot path; no heap allocation or flash/SD writes inside real-time callbacks.
 - A successful link without `Reset_Handler` is NOT a valid firmware build. Release builds require a valid vector table and startup path.
+
+## 7. LCD/HMI rules
+- Local LCD is presentation/HMI only; never place acquisition, PID, safety or flash-write logic inside display rendering.
+- Display refresh target is 10 Hz or lower and must be non-blocking.
+- Use `LABDAQ_DisplayHW_*` adapter hooks for the selected LCD; do not hard-code a controller into the page model.
+- PA0 is PAGE navigation. Emergency stop must remain independent hard-wired safety hardware.
+- Product header branding is **iMonitor — Azerbaijan Industrial Processing Co. — iMonitor.ir**.
