@@ -49,13 +49,18 @@ int main(void)
 
     /* Initialize Peripherals and GPIOs */
     MX_GPIO_Init();
+
+    /* Power-on visual self-test: keep LCD backlight OFF for the first second. */
+    HAL_GPIO_WritePin(LABDAQ_LCD_BL_PORT, LABDAQ_LCD_BL_PIN, GPIO_PIN_RESET);
+    HAL_Delay(1000);
+    HAL_GPIO_WritePin(LABDAQ_LCD_BL_PORT, LABDAQ_LCD_BL_PIN, GPIO_PIN_SET);
+
     LABDAQ_Heartbeat_Init();
     LABDAQ_Heartbeat_SetState(LABDAQ_HB_INIT);
     MX_USART1_UART_Init();
     MX_USART2_UART_Init();
 
     /* Earliest visible diagnostics: prove that clock/GPIO/UART reached main(). */
-    HAL_GPIO_WritePin(LABDAQ_LCD_BL_PORT, LABDAQ_LCD_BL_PIN, GPIO_PIN_SET);
     const char *early_boot = "\r\n[BOOT] STM32F407 main() reached - GPIO/UART OK\r\n";
     HAL_UART_Transmit(&huart1, (uint8_t *)early_boot, strlen(early_boot), 100);
 
@@ -281,7 +286,7 @@ static void MX_GPIO_Init(void)
     GPIO_InitStruct.Pull = GPIO_NOPULL;
     GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
     HAL_GPIO_Init(LABDAQ_LCD_BL_PORT, &GPIO_InitStruct);
-    HAL_GPIO_WritePin(LABDAQ_LCD_BL_PORT, LABDAQ_LCD_BL_PIN, GPIO_PIN_SET);
+    HAL_GPIO_WritePin(LABDAQ_LCD_BL_PORT, LABDAQ_LCD_BL_PIN, GPIO_PIN_RESET);
 
     /* User Button on PA0 */
     GPIO_InitStruct.Pin = LABDAQ_BTN_PIN;
