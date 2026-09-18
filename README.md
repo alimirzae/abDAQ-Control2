@@ -3,7 +3,7 @@
 [![Platform](https://img.shields.io/badge/Platform-STM32F407VG%20%7C%20Cortex--M4F%20168MHz-blue.svg)](https://www.st.com/en/microcontrollers-microprocessors/stm32f407vg.html)
 [![IDE](https://img.shields.io/badge/IDE-STM32CubeIDE%20%2F%20Makefile-brightgreen.svg)]()
 [![Channels](https://img.shields.io/badge/Channels-16%20Analog%20Multiplexed-orange.svg)]()
-[![Sampling](https://img.shields.io/badge/Max%20Rate-10%20kSPS%2Fch-red.svg)]()
+[![Sampling](https://img.shields.io/badge/Target%20Rate-1000%20SPS%2Fch-red.svg)]()
 [![Protocols](https://img.shields.io/badge/Protocols-SCPI%20%7C%20Modbus%20RTU%20%7C%20TCP%20Stream-purple.svg)]()
 
 > **مستندات و فریم‌ور کنترلر داده‌برداری پرسرعت ۱۶ کاناله و آزمون خستگی سیکلیک بر پایه میکروکنترلر STM32F407**  
@@ -27,6 +27,13 @@
 - [راهنمای راه‌اندازی و کامپایل / Build & Flash Guide](#راهنمای-راه‌اندازی-و-کامپایل--build--flash-guide)
 
 ---
+
+
+## 2026 Control Console Expansion
+
+The project now includes a structured control layer for the complete laboratory workflow, not only raw acquisition. The embedded management console is organized into **Data Logger**, **Triaxial Tests**, **PID / EP Motors**, **Channels & Calibration**, **Time**, **Logs**, and **Settings** tabs. Two EP motor channels have independent calibration and PID state, while all 16 analog inputs have editable engineering names, units, gain and offset. See [docs/CONTROL_SYSTEM.md](docs/CONTROL_SYSTEM.md), [docs/WEB_API.md](docs/WEB_API.md) and [ROADMAP.md](ROADMAP.md).
+
+> Safety: closed-loop hydraulic/EP output is intentionally gated until the actual PWM→0–10 V timer pins, polarity, feedback mapping and emergency-stop chain are commissioned on the real machine.
 
 ## معرفی سیستم / Overview
 
