@@ -39,16 +39,30 @@ static void MX_GPIO_Init(void);
 static void MX_USART1_UART_Init(void);
 static void MX_USART2_UART_Init(void);
 
+/* Debugger-visible boot breadcrumbs.
+ * Watch these in STM32CubeIDE Expressions/Live Expressions while single-stepping.
+ * They require no UART/semihosting and therefore work with an ordinary ST-LINK SWD probe.
+ */
+volatile uint32_t g_debug_stage = 0U;
+volatile uint32_t g_debug_error = 0U;
+volatile uint32_t g_debug_hal_tick = 0U;
+
+#define DEBUG_STAGE(n) do { g_debug_stage = (n); g_debug_hal_tick = HAL_GetTick(); __DSB(); } while (0)
+
 int main(void)
 {
     /* Reset of all peripherals, Initializes the Flash interface and the Systick. */
+    g_debug_stage = 1U; /* entered main */
     HAL_Init();
+    DEBUG_STAGE(2U);     /* HAL/SysTick initialized */
 
     /* Configure the system clock (168 MHz from 25 MHz HSE Crystal) */
     SystemClock_Config();
+    DEBUG_STAGE(3U);     /* 168 MHz clock configured */
 
     /* Initialize Peripherals and GPIOs */
     MX_GPIO_Init();
+    DEBUG_STAGE(4U);     /* GPIO initialized */
 
     /* Rev2 power-on self-test:
      * - LED1 is PB1 and blinks five times immediately.
@@ -57,10 +71,14 @@ int main(void)
      */
     HAL_GPIO_WritePin(LABDAQ_LCD_BL_PORT, LABDAQ_LCD_BL_PIN, GPIO_PIN_RESET);
     LABDAQ_Heartbeat_Init();
+    DEBUG_STAGE(5U);     /* heartbeat/LED initialized */
     MX_USART1_UART_Init();
+    DEBUG_STAGE(6U);     /* USART1 initialized */
 
     const char *early_boot = "\r\n[BOOT] EWB-STM32F407 Rev2 main() reached @ 115200 8N1\r\n";
-    HAL_UART_Transmit(&huart1, (uint8_t *)early_boot, strlen(early_boot), 100);
+    HAL_StatusTypeDef uart_boot_status = HAL_UART_Transmit(&huart1, (uint8_t *)early_boot, strlen(early_boot), 100);
+    g_debug_error = (uint32_t)uart_boot_status;
+    DEBUG_STAGE(7U);     /* first UART transmit attempted */
 
     for (uint8_t i = 0; i < 5U; ++i) {
         HAL_GPIO_WritePin(LABDAQ_LED_PORT, LABDAQ_LED_PIN, GPIO_PIN_SET);
@@ -68,25 +86,35 @@ int main(void)
         HAL_GPIO_WritePin(LABDAQ_LED_PORT, LABDAQ_LED_PIN, GPIO_PIN_RESET);
         HAL_Delay(100);
     }
+    DEBUG_STAGE(8U);     /* PB1 five-blink test completed */
     HAL_GPIO_WritePin(LABDAQ_LCD_BL_PORT, LABDAQ_LCD_BL_PIN, GPIO_PIN_SET);
+    DEBUG_STAGE(9U);     /* LCD backlight asserted */
 
     LABDAQ_Heartbeat_SetState(LABDAQ_HB_INIT);
     MX_USART2_UART_Init();
+    DEBUG_STAGE(10U);    /* USART2 initialized */
 
     /* Bring up the local 4-inch LCD before DAQ init so boot/fault status is visible. */
+    DEBUG_STAGE(11U);    /* entering LCD init */
     LABDAQ_Display_Init();
+    DEBUG_STAGE(12U);    /* LCD init returned */
 
     /* Initialize LabDAQ Master System (MUX, ADC, Filters, Ping-Pong Buffers, Timer) */
+    DEBUG_STAGE(13U);    /* entering DAQ init */
     if (!LABDAQ_System_Init(&g_labdaq)) {
+        g_debug_error = 0xDA01U;
         Error_Handler();
     }
+    DEBUG_STAGE(14U);    /* DAQ init returned */
 
     /* Initialize Communication Interfaces (RS485 DIR, etc.) */
     LABDAQ_Comm_Init(&g_labdaq);
     LABDAQ_Control_Init();
 
     /* Initialize Ethernet Network Stack (UDP Multicast/Unicast & Embedded HTTP Web Server) */
+    DEBUG_STAGE(15U);
     LABDAQ_Net_Init(&g_labdaq);
+    DEBUG_STAGE(16U);    /* network init returned */
 
     /* Send Boot Banner via USART1 (CP2104 USB-to-UART) */
     const char *boot_msg = "\r\n=========================================\r\n"
@@ -100,6 +128,7 @@ int main(void)
 
     /* Start Continuous Acquisition by default */
     LABDAQ_System_StartAcquisition(&g_labdaq);
+    DEBUG_STAGE(17U);    /* acquisition started / entering superloop */
     LABDAQ_Heartbeat_SetState(LABDAQ_HB_ACQUIRING);
 
     uint32_t last_sync_step = 0;
@@ -308,6 +337,12 @@ static void MX_GPIO_Init(void)
 
 void Error_Handler(void)
 {
+    if (g_debug_error == 0U) {
+        g_debug_error = 0xE001U;
+    }
+    g_debug_stage = 0xEEEEU;
+    __DSB();
+
     /* Keep SysTick alive so the distinctive fault blink remains visible. */
     LABDAQ_Heartbeat_FaultBlocking();
 }
