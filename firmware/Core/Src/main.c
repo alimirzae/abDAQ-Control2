@@ -73,6 +73,9 @@ int main(void)
     LABDAQ_Heartbeat_SetState(LABDAQ_HB_INIT);
     MX_USART2_UART_Init();
 
+    /* Bring up the local 4-inch LCD before DAQ init so boot/fault status is visible. */
+    LABDAQ_Display_Init();
+
     /* Initialize LabDAQ Master System (MUX, ADC, Filters, Ping-Pong Buffers, Timer) */
     if (!LABDAQ_System_Init(&g_labdaq)) {
         Error_Handler();
@@ -81,7 +84,6 @@ int main(void)
     /* Initialize Communication Interfaces (RS485 DIR, etc.) */
     LABDAQ_Comm_Init(&g_labdaq);
     LABDAQ_Control_Init();
-    LABDAQ_Display_Init();
 
     /* Initialize Ethernet Network Stack (UDP Multicast/Unicast & Embedded HTTP Web Server) */
     LABDAQ_Net_Init(&g_labdaq);
