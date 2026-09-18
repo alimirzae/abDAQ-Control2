@@ -145,3 +145,9 @@ Images provided for circuit documentation:
 - Safety decision: PID calculation may exist before physical output commissioning, but physical 0–10 V actuation stays gated until timer/pin mapping, polarity, feedback channel and E-stop behavior are verified.
 - Sampling commissioning targets are **100, 500 and 1000 complete 16-channel frames per second**. Higher rates in legacy docs are not release claims until measured.
 - Time API currently provides set/query runtime Unix time. RTC backup-domain persistence is a roadmap item and must not be falsely described as power-loss persistent until implemented and tested.
+
+## 6. Local LCD HMI decision
+- Local HMI added as a non-blocking 10 Hz display layer; it must never disturb 100/500/1000 SPS/ch acquisition or PID timing.
+- Branding: **iMonitor / Azerbaijan Industrial Processing Co. / iMonitor.ir**.
+- PA0 user button is the PAGE key. LCD pages: Status, Sensors, Live Graph, Test Graph, Experiment, PID/EP, Alarms, System.
+- Physical LCD controller/interface/pins are deliberately deferred until module selection; use the `LABDAQ_DisplayHW_*` adapter hooks.
