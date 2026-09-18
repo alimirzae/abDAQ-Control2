@@ -54,6 +54,11 @@ int main(void)
     MX_USART1_UART_Init();
     MX_USART2_UART_Init();
 
+    /* Earliest visible diagnostics: prove that clock/GPIO/UART reached main(). */
+    HAL_GPIO_WritePin(LABDAQ_LCD_BL_PORT, LABDAQ_LCD_BL_PIN, GPIO_PIN_SET);
+    const char *early_boot = "\r\n[BOOT] STM32F407 main() reached - GPIO/UART OK\r\n";
+    HAL_UART_Transmit(&huart1, (uint8_t *)early_boot, strlen(early_boot), 100);
+
     /* Initialize LabDAQ Master System (MUX, ADC, Filters, Ping-Pong Buffers, Timer) */
     if (!LABDAQ_System_Init(&g_labdaq)) {
         Error_Handler();
@@ -145,9 +150,9 @@ int main(void)
         }
 
         /* Local HMI PAGE button: PA0, debounced in display module. */
-        static GPIO_PinState last_page_button = GPIO_PIN_RESET;
+        static GPIO_PinState last_page_button = GPIO_PIN_SET;
         GPIO_PinState page_button = HAL_GPIO_ReadPin(LABDAQ_BTN_PORT, LABDAQ_BTN_PIN);
-        if (page_button == GPIO_PIN_SET && last_page_button == GPIO_PIN_RESET) {
+        if (page_button == GPIO_PIN_RESET && last_page_button == GPIO_PIN_SET) {
             LABDAQ_Display_ButtonEvent();
         }
         last_page_button = page_button;
@@ -256,21 +261,32 @@ static void MX_USART2_UART_Init(void)
 
 static void MX_GPIO_Init(void)
 {
-    __HAL_RCC_GPIOC_CLK_ENABLE();
     __HAL_RCC_GPIOA_CLK_ENABLE();
+    __HAL_RCC_GPIOB_CLK_ENABLE();
+    __HAL_RCC_GPIOC_CLK_ENABLE();
+    __HAL_RCC_GPIOD_CLK_ENABLE();
 
-    /* LED1 on PC13 */
+    /* Board LED1 is PB2 according to EWB-STM32F407V-LAN-V3.0 schematic. */
     GPIO_InitTypeDef GPIO_InitStruct = {0};
     GPIO_InitStruct.Pin = LABDAQ_LED_PIN;
     GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
     GPIO_InitStruct.Pull = GPIO_NOPULL;
     GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
     HAL_GPIO_Init(LABDAQ_LED_PORT, &GPIO_InitStruct);
+    HAL_GPIO_WritePin(LABDAQ_LED_PORT, LABDAQ_LED_PIN, GPIO_PIN_SET);
+
+    /* LCD backlight enable: PB1 -> Q1 S8050 -> LEDK1/2/3, active HIGH. */
+    GPIO_InitStruct.Pin = LABDAQ_LCD_BL_PIN;
+    GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+    GPIO_InitStruct.Pull = GPIO_NOPULL;
+    GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+    HAL_GPIO_Init(LABDAQ_LCD_BL_PORT, &GPIO_InitStruct);
+    HAL_GPIO_WritePin(LABDAQ_LCD_BL_PORT, LABDAQ_LCD_BL_PIN, GPIO_PIN_SET);
 
     /* User Button on PA0 */
     GPIO_InitStruct.Pin = LABDAQ_BTN_PIN;
     GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
-    GPIO_InitStruct.Pull = GPIO_PULLDOWN;
+    GPIO_InitStruct.Pull = GPIO_PULLUP;
     HAL_GPIO_Init(LABDAQ_BTN_PORT, &GPIO_InitStruct);
 }
 
