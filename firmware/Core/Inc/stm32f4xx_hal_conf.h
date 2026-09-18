@@ -42,6 +42,10 @@ extern "C" {
   #define HSI_VALUE    16000000U
 #endif
 
+#if !defined  (EXTERNAL_CLOCK_VALUE)
+  #define EXTERNAL_CLOCK_VALUE 12288000U /* Default external I2S clock value used by STM32F4 HAL */
+#endif
+
 #if !defined  (LSI_VALUE)
   #define LSI_VALUE    32000U
 #endif
@@ -59,6 +63,11 @@ extern "C" {
 #define PREFETCH_ENABLE          1U
 #define INSTRUCTION_CACHE_ENABLE 1U
 #define DATA_CACHE_ENABLE        1U
+
+/* Parameter checking disabled for production builds. */
+#ifndef assert_param
+  #define assert_param(expr) ((void)0U)
+#endif
 
 /* Ethernet Driver configuration (LAN8720A RMII) */
 #define ETH_RX_BUF_SIZE                1524U
