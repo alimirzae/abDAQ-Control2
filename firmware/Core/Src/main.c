@@ -23,8 +23,8 @@
 labdaq_system_t g_labdaq;
 
 /* UART Handles for SCPI (USART1) and RS485 Modbus (USART2) */
-UART_HandleTypeDef huart1;
-UART_HandleTypeDef huart2;
+UART_HandleTypeDef huart1 = {0};
+UART_HandleTypeDef huart2 = {0};
 
 /* Reception ring buffers */
 static char scpi_rx_line[256];
@@ -284,7 +284,13 @@ static void MX_USART1_UART_Init(void)
     huart1.Init.Mode = UART_MODE_TX_RX;
     huart1.Init.HwFlowCtl = UART_HWCONTROL_NONE;
     huart1.Init.OverSampling = UART_OVERSAMPLING_16;
-    HAL_UART_Init(&huart1);
+    huart1.AdvancedInit.AdvFeatureInit = UART_ADVFEATURE_NO_INIT;
+    g_debug_stage = 51U;
+    if (HAL_UART_Init(&huart1) != HAL_OK) {
+        g_debug_error = 0xAA01U;
+        Error_Handler();
+    }
+    g_debug_stage = 52U;
 }
 
 static void MX_USART2_UART_Init(void)
@@ -308,7 +314,14 @@ static void MX_USART2_UART_Init(void)
     huart2.Init.Parity = UART_PARITY_NONE;
     huart2.Init.Mode = UART_MODE_TX_RX;
     huart2.Init.HwFlowCtl = UART_HWCONTROL_NONE;
-    HAL_UART_Init(&huart2);
+    huart2.Init.OverSampling = UART_OVERSAMPLING_16;
+    huart2.AdvancedInit.AdvFeatureInit = UART_ADVFEATURE_NO_INIT;
+    g_debug_stage = 61U;
+    if (HAL_UART_Init(&huart2) != HAL_OK) {
+        g_debug_error = 0xAA02U;
+        Error_Handler();
+    }
+    g_debug_stage = 62U;
 }
 
 static void MX_GPIO_Init(void)
@@ -334,6 +347,14 @@ static void MX_GPIO_Init(void)
     GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
     HAL_GPIO_Init(LABDAQ_LCD_BL_PORT, &GPIO_InitStruct);
     HAL_GPIO_WritePin(LABDAQ_LCD_BL_PORT, LABDAQ_LCD_BL_PIN, GPIO_PIN_RESET);
+
+    /* RS485 direction pin must be a defined output before communication code uses it. */
+    GPIO_InitStruct.Pin = LABDAQ_RS485_DIR_PIN;
+    GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+    GPIO_InitStruct.Pull = GPIO_NOPULL;
+    GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+    HAL_GPIO_Init(LABDAQ_RS485_DIR_PORT, &GPIO_InitStruct);
+    HAL_GPIO_WritePin(LABDAQ_RS485_DIR_PORT, LABDAQ_RS485_DIR_PIN, GPIO_PIN_RESET);
 
     /* User Button on PA0 */
     GPIO_InitStruct.Pin = LABDAQ_BTN_PIN;
