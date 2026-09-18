@@ -1,0 +1,6 @@
+{
+  "name": "LabDAQ-Control",
+  "description": "STM32 High-Speed Data Acquisition & Cyclic Test Control System firmware, wiring guides, protocols, and documentation.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
