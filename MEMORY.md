@@ -135,3 +135,13 @@ Images provided for circuit documentation:
   - Analog channel selector (0 to 15) for active scope viewing.
   - HTML5 Canvas real-time oscilloscope updating at 20-30 FPS directly inside any web browser.
 
+
+---
+## 5. 2026-09-18 control-system expansion
+- Build baseline reached **0 errors**; the previous build still reported a format warning and a critical missing `Reset_Handler` linker warning. The format warning was corrected and a Cortex-M4 vector/startup unit was added; a fresh local build is required to verify zero warnings.
+- Product scope now includes Data Logger + triaxial experiment control from the embedded web UI.
+- Required web areas: Data Logger, Triaxial Tests, PID/EP Motors, 16-Channel Calibration, Time, Logs, Settings.
+- Two independent EP motor calibration records and PID states are represented in `labdaq_control_t`.
+- Safety decision: PID calculation may exist before physical output commissioning, but physical 0–10 V actuation stays gated until timer/pin mapping, polarity, feedback channel and E-stop behavior are verified.
+- Sampling commissioning targets are **100, 500 and 1000 complete 16-channel frames per second**. Higher rates in legacy docs are not release claims until measured.
+- Time API currently provides set/query runtime Unix time. RTC backup-domain persistence is a roadmap item and must not be falsely described as power-loss persistent until implemented and tested.
