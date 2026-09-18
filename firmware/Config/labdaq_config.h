@@ -53,11 +53,25 @@ extern "C" {
 
 /* Direct Secondary Analog Inputs (Direct High-Speed without MUX delay)       */
 #define LABDAQ_DIRECT_ADC_CH1        ADC_CHANNEL_3  /* PA3: Fast Load Cell / Force */
-#define LABDAQ_DIRECT_ADC_CH2        ADC_CHANNEL_5  /* PA5: Linear Displacement LVDT */
+#define LABDAQ_DIRECT_ADC_CH2        ADC_CHANNEL_5  /* PA5 conflicts with onboard LCD SPI1_SCK; do not use while LCD is enabled */
 
 /* On-board User LED and Pushbutton                                          */
-#define LABDAQ_LED_PORT              GPIOC
-#define LABDAQ_LED_PIN               GPIO_PIN_13
+#define LABDAQ_LED_PORT              GPIOB
+#define LABDAQ_LED_PIN               GPIO_PIN_2    /* Board schematic: LED1 -> PB2 */
+#define LABDAQ_LCD_BL_PORT           GPIOB
+#define LABDAQ_LCD_BL_PIN            GPIO_PIN_1    /* BL_EN -> Q1 S8050, active HIGH */
+#define LABDAQ_LCD_CS_PORT           GPIOD
+#define LABDAQ_LCD_CS_PIN            GPIO_PIN_13
+#define LABDAQ_LCD_RST_PORT          GPIOD
+#define LABDAQ_LCD_RST_PIN           GPIO_PIN_14
+#define LABDAQ_LCD_DC_PORT           GPIOD
+#define LABDAQ_LCD_DC_PIN            GPIO_PIN_15
+#define LABDAQ_LCD_SPI_SCK_PORT      GPIOA
+#define LABDAQ_LCD_SPI_SCK_PIN       GPIO_PIN_5
+#define LABDAQ_LCD_SPI_MISO_PORT     GPIOA
+#define LABDAQ_LCD_SPI_MISO_PIN      GPIO_PIN_6
+#define LABDAQ_LCD_SPI_MOSI_PORT     GPIOB
+#define LABDAQ_LCD_SPI_MOSI_PIN      GPIO_PIN_5
 #define LABDAQ_BTN_PORT              GPIOA
 #define LABDAQ_BTN_PIN               GPIO_PIN_0    /* PA0 WAKEUP */
 
