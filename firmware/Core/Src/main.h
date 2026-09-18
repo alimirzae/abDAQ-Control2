@@ -1,7 +1,7 @@
 /**
  * @file    main.h
  * @brief   Include forwarder for Core/Src/ -> Core/Inc/main.h
- *          Enables seamless compilation when arm-none-eabi-gcc is invoked on Core/Src/*.c
+ *          Enables seamless compilation when arm-none-eabi-gcc is invoked on Core/Src files
  *          without explicit -I../Core/Inc flag.
  */
 #ifndef CORE_SRC_MAIN_FORWARDER_H_

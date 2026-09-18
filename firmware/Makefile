@@ -20,7 +20,23 @@ firmware/Drivers/labdaq_buffer.c \
 firmware/Drivers/labdaq_filter.c \
 firmware/Drivers/labdaq_sampler.c \
 firmware/Drivers/labdaq_comm.c \
-firmware/Drivers/labdaq_net.c
+firmware/Drivers/labdaq_net.c \
+firmware/Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal.c \
+firmware/Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_rcc.c \
+firmware/Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_rcc_ex.c \
+firmware/Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_gpio.c \
+firmware/Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_dma.c \
+firmware/Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_dma_ex.c \
+firmware/Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_cortex.c \
+firmware/Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_adc.c \
+firmware/Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_adc_ex.c \
+firmware/Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_tim.c \
+firmware/Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_tim_ex.c \
+firmware/Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_uart.c \
+firmware/Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_pwr.c \
+firmware/Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_pwr_ex.c \
+firmware/Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_flash.c \
+firmware/Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_flash_ex.c
 
 # ASM sources
 ASM_SOURCES = 
@@ -50,9 +66,17 @@ C_DEFS =  \
 C_INCLUDES =  \
 -ICore/Inc \
 -IDrivers \
+-IDrivers/STM32F4xx_HAL_Driver/Inc \
+-IDrivers/STM32F4xx_HAL_Driver/Inc/Legacy \
+-IDrivers/CMSIS/Device/ST/STM32F4xx/Include \
+-IDrivers/CMSIS/Include \
 -IConfig \
 -Ifirmware/Core/Inc \
 -Ifirmware/Drivers \
+-Ifirmware/Drivers/STM32F4xx_HAL_Driver/Inc \
+-Ifirmware/Drivers/STM32F4xx_HAL_Driver/Inc/Legacy \
+-Ifirmware/Drivers/CMSIS/Device/ST/STM32F4xx/Include \
+-Ifirmware/Drivers/CMSIS/Include \
 -Ifirmware/Config
 
 # Compiler flags
