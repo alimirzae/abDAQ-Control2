@@ -32,3 +32,12 @@
 
 ## Release gate
 A production release requires: 0 compiler errors; no missing Reset_Handler; validated vector table; 100/500/1000 SPS/ch timing evidence; actuator safe-state test; E-stop test; calibration traceability; PID commissioning report; 8-hour soak test.
+
+## Phase 1A — local LCD HMI
+- [x] Hardware-neutral LCD page/state framework.
+- [x] PAGE button navigation and debounce.
+- [x] iMonitor / Azerbaijan Industrial Processing Co. / iMonitor.ir branding header.
+- [x] Status, sensors, live graph, test graph, experiment, PID/EP, alarms and system pages.
+- [ ] Select physical LCD controller/resolution/interface after pin-conflict review.
+- [ ] Implement SPI/FSMC display adapter, backlight and optional touch if required.
+- [ ] Validate LCD refresh while DAQ runs at 1000 complete 16-channel frames/s.
