@@ -56,7 +56,7 @@ int main(void)
     HAL_Init();
     DEBUG_STAGE(2U);     /* HAL/SysTick initialized */
 
-    /* Configure the system clock (168 MHz from 25 MHz HSE Crystal) */
+    /* Configure a bring-up-safe 168 MHz clock from the internal 16 MHz HSI. */
     SystemClock_Config();
     DEBUG_STAGE(3U);     /* 168 MHz clock configured */
 
@@ -65,7 +65,7 @@ int main(void)
     DEBUG_STAGE(4U);     /* GPIO initialized */
 
     /* Rev2 power-on self-test:
-     * - LED1 is PB1 and blinks five times immediately.
+     * - LED1 is PB1, active LOW, and blinks five times immediately.
      * - LCD backlight is PB0 and remains OFF for the first second.
      * This makes a newly flashed image visually distinguishable from power-only behavior.
      */
@@ -81,9 +81,9 @@ int main(void)
     DEBUG_STAGE(7U);     /* first UART transmit attempted */
 
     for (uint8_t i = 0; i < 5U; ++i) {
-        HAL_GPIO_WritePin(LABDAQ_LED_PORT, LABDAQ_LED_PIN, GPIO_PIN_SET);
-        HAL_Delay(100);
         HAL_GPIO_WritePin(LABDAQ_LED_PORT, LABDAQ_LED_PIN, GPIO_PIN_RESET);
+        HAL_Delay(100);
+        HAL_GPIO_WritePin(LABDAQ_LED_PORT, LABDAQ_LED_PIN, GPIO_PIN_SET);
         HAL_Delay(100);
     }
     DEBUG_STAGE(8U);     /* PB1 five-blink test completed */
@@ -228,31 +228,43 @@ void SystemClock_Config(void)
     RCC_OscInitTypeDef RCC_OscInitStruct = {0};
     RCC_ClkInitTypeDef RCC_ClkInitStruct = {0};
 
+    /* Bring-up-safe clock: use the STM32F407 internal 16 MHz HSI.
+     * This removes dependency on an unverified external crystal/oscillator
+     * while keeping the target 168 MHz system clock.
+     * PLL: 16 MHz / 16 * 336 / 2 = 168 MHz.
+     */
     __HAL_RCC_PWR_CLK_ENABLE();
     __HAL_PWR_VOLTAGESCALING_CONFIG(PWR_REGULATOR_VOLTAGE_SCALE1);
 
-    RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSE;
-    RCC_OscInitStruct.HSEState = RCC_HSE_ON;
+    RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSI;
+    RCC_OscInitStruct.HSIState = RCC_HSI_ON;
+    RCC_OscInitStruct.HSICalibrationValue = RCC_HSICALIBRATION_DEFAULT;
     RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
-    RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSE;
-    RCC_OscInitStruct.PLL.PLLM = 25;
+    RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSI;
+    RCC_OscInitStruct.PLL.PLLM = 16;
     RCC_OscInitStruct.PLL.PLLN = 336;
     RCC_OscInitStruct.PLL.PLLP = RCC_PLLP_DIV2;
     RCC_OscInitStruct.PLL.PLLQ = 7;
+
+    g_debug_stage = 21U; /* entering oscillator/PLL configuration */
     if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK) {
+        g_debug_error = 0xC101U;
         Error_Handler();
     }
+    g_debug_stage = 22U; /* HSI + PLL ready */
 
-    RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK|RCC_CLOCKTYPE_SYSCLK
-                                |RCC_CLOCKTYPE_PCLK1|RCC_CLOCKTYPE_PCLK2;
+    RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK | RCC_CLOCKTYPE_SYSCLK
+                                | RCC_CLOCKTYPE_PCLK1 | RCC_CLOCKTYPE_PCLK2;
     RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK;
     RCC_ClkInitStruct.AHBCLKDivider = RCC_SYSCLK_DIV1;
     RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV4;
     RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV2;
 
     if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_5) != HAL_OK) {
+        g_debug_error = 0xC102U;
         Error_Handler();
     }
+    g_debug_stage = 23U; /* SYSCLK switched to PLL */
 }
 
 static void MX_USART1_UART_Init(void)
@@ -311,7 +323,7 @@ static void MX_GPIO_Init(void)
     __HAL_RCC_GPIOC_CLK_ENABLE();
     __HAL_RCC_GPIOD_CLK_ENABLE();
 
-    /* Rev2 schematic: LED1 is PB1 (active HIGH). */
+    /* Board example confirms LED1 is PB1 and active LOW. */
     GPIO_InitTypeDef GPIO_InitStruct = {0};
     GPIO_InitStruct.Pin = LABDAQ_LED_PIN;
     GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
