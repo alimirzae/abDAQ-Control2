@@ -207,3 +207,6 @@ make -j4
 ```bash
 st-flash write build/LabDAQ-Control.bin 0x8000000
 ```
+
+## Local LCD HMI
+A non-blocking local LCD HMI is now part of the firmware architecture with a physical PAGE button and eight screens: Status, Sensors, Live Graph, Test Graph, Experiment, PID/EP, Alarms and System. Branding: **iMonitor — Azerbaijan Industrial Processing Co. — iMonitor.ir**. The display-controller adapter remains hardware-neutral until the exact LCD module is selected. See [docs/LCD_HMI.md](docs/LCD_HMI.md).
