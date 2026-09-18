@@ -3,7 +3,6 @@
  * Provides vector table and Reset_Handler so the ELF is bootable.
  */
 #include <stdint.h>
-#include "stm32f4xx_hal.h"
 
 extern int main(void);
 extern void SystemInit(void);
@@ -44,11 +43,8 @@ void SVC_Handler(void) WEAK_DEFAULT;
 void DebugMon_Handler(void) WEAK_DEFAULT;
 void PendSV_Handler(void) WEAK_DEFAULT;
 
-/* HAL_Init() enables SysTick. Keep the HAL millisecond time base alive. */
-void SysTick_Handler(void)
-{
-    HAL_IncTick();
-}
+/* SysTick_Handler is implemented in stm32f4xx_it.c. */
+extern void SysTick_Handler(void);
 
 __attribute__((section(".isr_vector"), used))
 void (* const g_pfnVectors[])(void) = {
