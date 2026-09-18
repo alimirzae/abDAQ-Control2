@@ -2,7 +2,7 @@
  ******************************************************************************
  * @file           : main.c
  * @brief          : Main program body for LabDAQ-Control STM32F407 System
- *                   EWB-STM32F407V-LAN-V3.0 + TXS0108E Level Shifter + MUX16
+ *                   EWB-STM32F407 Rev2.0 + 4.0-inch SPI LCD + external DAQ I/O
  ******************************************************************************
  */
 
@@ -50,19 +50,28 @@ int main(void)
     /* Initialize Peripherals and GPIOs */
     MX_GPIO_Init();
 
-    /* Power-on visual self-test: keep LCD backlight OFF for the first second. */
+    /* Rev2 power-on self-test:
+     * - LED1 is PB1 and blinks five times immediately.
+     * - LCD backlight is PB0 and remains OFF for the first second.
+     * This makes a newly flashed image visually distinguishable from power-only behavior.
+     */
     HAL_GPIO_WritePin(LABDAQ_LCD_BL_PORT, LABDAQ_LCD_BL_PIN, GPIO_PIN_RESET);
-    HAL_Delay(1000);
+    LABDAQ_Heartbeat_Init();
+    MX_USART1_UART_Init();
+
+    const char *early_boot = "\r\n[BOOT] EWB-STM32F407 Rev2 main() reached @ 115200 8N1\r\n";
+    HAL_UART_Transmit(&huart1, (uint8_t *)early_boot, strlen(early_boot), 100);
+
+    for (uint8_t i = 0; i < 5U; ++i) {
+        HAL_GPIO_WritePin(LABDAQ_LED_PORT, LABDAQ_LED_PIN, GPIO_PIN_SET);
+        HAL_Delay(100);
+        HAL_GPIO_WritePin(LABDAQ_LED_PORT, LABDAQ_LED_PIN, GPIO_PIN_RESET);
+        HAL_Delay(100);
+    }
     HAL_GPIO_WritePin(LABDAQ_LCD_BL_PORT, LABDAQ_LCD_BL_PIN, GPIO_PIN_SET);
 
-    LABDAQ_Heartbeat_Init();
     LABDAQ_Heartbeat_SetState(LABDAQ_HB_INIT);
-    MX_USART1_UART_Init();
     MX_USART2_UART_Init();
-
-    /* Earliest visible diagnostics: prove that clock/GPIO/UART reached main(). */
-    const char *early_boot = "\r\n[BOOT] STM32F407 main() reached - GPIO/UART OK\r\n";
-    HAL_UART_Transmit(&huart1, (uint8_t *)early_boot, strlen(early_boot), 100);
 
     /* Initialize LabDAQ Master System (MUX, ADC, Filters, Ping-Pong Buffers, Timer) */
     if (!LABDAQ_System_Init(&g_labdaq)) {
@@ -271,7 +280,7 @@ static void MX_GPIO_Init(void)
     __HAL_RCC_GPIOC_CLK_ENABLE();
     __HAL_RCC_GPIOD_CLK_ENABLE();
 
-    /* Board LED1 is PB2 according to EWB-STM32F407V-LAN-V3.0 schematic. */
+    /* Rev2 schematic: LED1 is PB1 (active HIGH). */
     GPIO_InitTypeDef GPIO_InitStruct = {0};
     GPIO_InitStruct.Pin = LABDAQ_LED_PIN;
     GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
@@ -280,7 +289,7 @@ static void MX_GPIO_Init(void)
     HAL_GPIO_Init(LABDAQ_LED_PORT, &GPIO_InitStruct);
     HAL_GPIO_WritePin(LABDAQ_LED_PORT, LABDAQ_LED_PIN, GPIO_PIN_SET);
 
-    /* LCD backlight enable: PB1 -> Q1 S8050 -> LEDK1/2/3, active HIGH. */
+    /* Rev2 schematic: PB0 -> BL_EN -> Q1 S8050 -> LEDK1/2/3, active HIGH. */
     GPIO_InitStruct.Pin = LABDAQ_LCD_BL_PIN;
     GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
     GPIO_InitStruct.Pull = GPIO_NOPULL;
