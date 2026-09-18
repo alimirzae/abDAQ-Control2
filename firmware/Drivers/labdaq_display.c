@@ -53,12 +53,25 @@ static void render(labdaq_system_t *s){
  }
  LABDAQ_DisplayHW_EndFrame();
 }
-void LABDAQ_Display_Task(labdaq_system_t *s){
- if (!s) { return; }\n uint32_t now = HAL_GetTick();
- if(now-g_labdaq_display.last_refresh_ms<100U && !g_labdaq_display.dirty)return;
- g_labdaq_display.last_refresh_ms=now;
- uint8_t ch=g_labdaq_display.selected_channel;
- g_labdaq_display.history[g_labdaq_display.history_head]=LABDAQ_Channel_Engineering(ch,s->latest_voltage_frame[ch]);
- g_labdaq_display.history_head=(g_labdaq_display.history_head+1U)%LABDAQ_DISPLAY_HISTORY;
- render(s);g_labdaq_display.dirty=false;
+void LABDAQ_Display_Task(labdaq_system_t *s)
+{
+    if (s == NULL) {
+        return;
+    }
+
+    uint32_t now = HAL_GetTick();
+    if ((now - g_labdaq_display.last_refresh_ms < 100U) && !g_labdaq_display.dirty) {
+        return;
+    }
+
+    g_labdaq_display.last_refresh_ms = now;
+
+    uint8_t ch = g_labdaq_display.selected_channel;
+    g_labdaq_display.history[g_labdaq_display.history_head] =
+        LABDAQ_Channel_Engineering(ch, s->latest_voltage_frame[ch]);
+    g_labdaq_display.history_head =
+        (g_labdaq_display.history_head + 1U) % LABDAQ_DISPLAY_HISTORY;
+
+    render(s);
+    g_labdaq_display.dirty = false;
 }
