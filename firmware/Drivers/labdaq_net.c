@@ -8,6 +8,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include "labdaq_control.h"
 
 /* Global network state */
 static labdaq_net_state_t g_net = {
@@ -149,7 +150,7 @@ int LABDAQ_Unified_ExecuteCommand(labdaq_system_t *sys,
         }
     }
     if (strncmp(cmd_input, ":RATE?", 6) == 0) {
-        return snprintf(resp_out, resp_max, ":RATE %u Hz\r\n", sys->sampling_rate_hz);
+        return snprintf(resp_out, resp_max, ":RATE %lu Hz\r\n", (unsigned long)sys->sampling_rate_hz);
     }
 
     /* 4. Filter Configuration (:FILTER <TYPE> [PARAM])
@@ -260,6 +261,40 @@ int LABDAQ_Unified_ExecuteCommand(labdaq_system_t *sys,
                         sys->cyclic_gen.actuator_state ? 1 : 0);
     }
 
+    /* 9. Time, calibration, PID and experiment configuration */
+    if (strncmp(cmd_input, ":TIME:SET ", 10) == 0) {
+        LABDAQ_Time_SetUnix((uint32_t)strtoul(cmd_input + 10, NULL, 10));
+        return snprintf(resp_out, resp_max, "OK: TIME=%lu\\r\\n", (unsigned long)LABDAQ_Time_NowUnix());
+    }
+    if (strncmp(cmd_input, ":TIME?", 6) == 0)
+        return snprintf(resp_out, resp_max, "TIME=%lu\\r\\n", (unsigned long)LABDAQ_Time_NowUnix());
+    if (strncmp(cmd_input, ":CHAN:CAL ", 10) == 0) {
+        int ch=0; char name[24]={0},unit[12]={0}; float gain=1,offset=0;
+        if (sscanf(cmd_input+10,"%d,%23[^,],%11[^,],%f,%f",&ch,name,unit,&gain,&offset)==5 && ch>=0 && ch<LABDAQ_NUM_CHANNELS) {
+            LABDAQ_Channel_Set((uint8_t)ch,name,unit,gain,offset);
+            return snprintf(resp_out,resp_max,"OK: CH%d CALIBRATED\\r\\n",ch);
+        }
+        return snprintf(resp_out,resp_max,"ERR: CHAN:CAL ch,name,unit,gain,offset\\r\\n");
+    }
+    if (strncmp(cmd_input, ":PID:SET ", 9) == 0) {
+        int motor=0; float kp=0,ki=0,kd=0,sp=0;
+        if(sscanf(cmd_input+9,"%d,%f,%f,%f,%f",&motor,&kp,&ki,&kd,&sp)==5 && motor>=0 && motor<2){
+            LABDAQ_PID_Set((uint8_t)motor,kp,ki,kd,sp);
+            return snprintf(resp_out,resp_max,"OK: PID%d UPDATED\\r\\n",motor+1);
+        }
+        return snprintf(resp_out,resp_max,"ERR: PID:SET motor,kp,ki,kd,setpoint\\r\\n");
+    }
+    if (strncmp(cmd_input, ":MOTOR:CAL ", 11) == 0) {
+        int motor=0; float cmin=0,cmax=10,fmin=0,fmax=10;
+        if(sscanf(cmd_input+11,"%d,%f,%f,%f,%f",&motor,&cmin,&cmax,&fmin,&fmax)==5 && motor>=0 && motor<2){
+            LABDAQ_Motor_SetCalibration((uint8_t)motor,cmin,cmax,fmin,fmax);
+            return snprintf(resp_out,resp_max,"OK: MOTOR%d CALIBRATED\\r\\n",motor+1);
+        }
+        return snprintf(resp_out,resp_max,"ERR: MOTOR:CAL motor,cmdMin,cmdMax,fbMin,fbMax\\r\\n");
+    }
+    if (strncmp(cmd_input, ":LOG?", 5) == 0)
+        return snprintf(resp_out,resp_max,"LOG_COUNT=%u\\r\\n",g_labdaq_control.log_count);
+
     return snprintf(resp_out, resp_max, "ERR: UNKNOWN COMMAND: %s\r\n", cmd_input);
 }
 
@@ -274,95 +309,21 @@ void LABDAQ_Net_Process(labdaq_system_t *sys)
      */
 }
 
-int LABDAQ_HTTP_GenerateDashboard(labdaq_system_t *sys, char *html_buf, int max_len)
+int LABDAQ_HTTP_GenerateDashboard(labdaq_system_t *sys, char *b, int n)
 {
-    if (!sys || !html_buf || max_len <= 0) return 0;
-
-    uint8_t sel_ch = g_net.web_selected_channel;
-    if (sel_ch >= LABDAQ_NUM_CHANNELS) sel_ch = 0;
-
-    float current_mv = sys->latest_voltage_frame[sel_ch];
-    uint16_t current_raw = sys->latest_raw_frame[sel_ch];
-
-    return snprintf(html_buf, max_len,
-        "<!DOCTYPE html>"
-        "<html lang='en'>"
-        "<head>"
-        "<meta charset='UTF-8'><meta name='viewport' content='width=device-width,initial-scale=1.0'>"
-        "<title>LabDAQ-Control Web Server</title>"
-        "<style>"
-        "body{font-family:system-ui,-apple-system,sans-serif;background:#090d16;color:#e2e8f0;margin:0;padding:24px;}"
-        ".card{background:#131b2e;border:1px solid #1e293b;border-radius:12px;padding:20px;max-width:850px;margin:0 auto 20px;box-shadow:0 10px 25px rgba(0,0,0,0.5);}"
-        "h1{color:#10b981;font-size:22px;margin-top:0;display:flex;align-items:center;gap:10px;}"
-        ".badge{background:#064e3b;color:#6ee7b7;padding:3px 8px;border-radius:6px;font-size:12px;font-weight:600;}"
-        ".grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;margin:16px 0;}"
-        "label{font-size:13px;color:#94a3b8;display:block;margin-bottom:6px;}"
-        "select,input,button{background:#1e293b;border:1px solid #334155;color:#fff;padding:10px 14px;border-radius:8px;font-size:14px;width:100%%;box-sizing:border-box;}"
-        "button{background:#10b981;color:#000;font-weight:700;cursor:pointer;border:none;margin-top:8px;transition:0.2s;}"
-        "button:hover{background:#34d399;}"
-        "#canvasWrapper{background:#050811;border:1px solid #1e293b;border-radius:8px;padding:12px;margin-top:16px;}"
-        "canvas{width:100%%;height:240px;display:block;}"
-        ".val-badge{font-size:28px;font-family:monospace;font-weight:bold;color:#38bdf8;}"
-        "</style>"
-        "</head>"
-        "<body>"
-        "<div class='card'>"
-        "<h1><span>⚡ LabDAQ-Control</span><span class='badge'>STM32F407 Web Server</span></h1>"
-        "<p style='color:#94a3b8;font-size:14px;margin-bottom:20px;'>Real-time Web Management Dashboard & Live Channel Oscilloscope</p>"
-        "<form method='GET' action='/config'>"
-        "<div class='grid'>"
-        "<div><label>Sampling Rate (Hz)</label>"
-        "<select name='rate' onchange='this.form.submit()'>"
-        "<option value='100' %s>100 Hz (Low Speed)</option>"
-        "<option value='500' %s>500 Hz</option>"
-        "<option value='1000' %s>1000 Hz (Default 1 kSPS)</option>"
-        "<option value='2000' %s>2000 Hz (2 kSPS)</option>"
-        "<option value='5000' %s>5000 Hz (5 kSPS)</option>"
-        "<option value='10000' %s>10000 Hz (10 kSPS)</option>"
-        "</select></div>"
-        "<div><label>Active Channel to Display</label>"
-        "<select name='ch' id='chSelect' onchange='this.form.submit()'>"
-        "%s"
-        "</select></div>"
-        "</div>"
-        "</form>"
-        "<div class='grid' style='margin-top:10px;'>"
-        "<div><span style='font-size:13px;color:#94a3b8;'>Live Voltage:</span><div class='val-badge'>%.2f mV</div></div>"
-        "<div><span style='font-size:13px;color:#94a3b8;'>Raw 12-Bit ADC:</span><div class='val-badge' style='color:#a855f7;'>%u</div></div>"
-        "<div><span style='font-size:13px;color:#94a3b8;'>UDP Telemetry:</span><div style='font-size:14px;color:#10b981;font-weight:bold;margin-top:6px;'>239.255.0.100:5001</div></div>"
-        "</div>"
-        "<div id='canvasWrapper'><canvas id='scope'></canvas></div>"
-        "<script>"
-        "const canvas=document.getElementById('scope');const ctx=canvas.getContext('2d');"
-        "let data=[];canvas.width=canvas.parentElement.clientWidth;canvas.height=240;"
-        "function draw(){"
-        "ctx.fillStyle='#050811';ctx.fillRect(0,0,canvas.width,canvas.height);"
-        "ctx.strokeStyle='#1e293b';ctx.lineWidth=1;ctx.beginPath();"
-        "for(let y=40;y<canvas.height;y+=40){ctx.moveTo(0,y);ctx.lineTo(canvas.width,y);}"
-        "ctx.stroke();"
-        "if(data.length>1){"
-        "ctx.strokeStyle='#10b981';ctx.lineWidth=2;ctx.beginPath();"
-        "for(let i=0;i<data.length;i++){"
-        "let x=(i/(data.length-1))*canvas.width;"
-        "let y=canvas.height-(data[i]/3300)*canvas.height;"
-        "if(i===0)ctx.moveTo(x,y);else ctx.lineTo(x,y);"
-        "}ctx.stroke();}"
-        "}"
-        "setInterval(()=>{fetch('/api/sample?ch=' + %d).then(r=>r.json()).then(d=>{"
-        "data.push(d.mv);if(data.length>150)data.shift();draw();"
-        "});},100);"
-        "</script>"
-        "</div></body></html>",
-        (sys->sampling_rate_hz == 100) ? "selected" : "",
-        (sys->sampling_rate_hz == 500) ? "selected" : "",
-        (sys->sampling_rate_hz == 1000) ? "selected" : "",
-        (sys->sampling_rate_hz == 2000) ? "selected" : "",
-        (sys->sampling_rate_hz == 5000) ? "selected" : "",
-        (sys->sampling_rate_hz == 10000) ? "selected" : "",
-        /* Options for channels 0..15 */
-        "<option value='0' selected>Channel 0 (Load Cell)</option><option value='1'>Channel 1 (Displacement)</option><option value='2'>Channel 2 (Pressure)</option><option value='3'>Channel 3</option><option value='4'>Channel 4</option><option value='5'>Channel 5</option><option value='6'>Channel 6</option><option value='7'>Channel 7</option><option value='8'>Channel 8</option><option value='9'>Channel 9</option><option value='10'>Channel 10</option><option value='11'>Channel 11</option><option value='12'>Channel 12</option><option value='13'>Channel 13</option><option value='14'>Channel 14</option><option value='15'>Channel 15</option>",
-        current_mv,
-        current_raw,
-        sel_ch
-    );
+ if(!sys||!b||n<=0)return 0;
+ return snprintf(b,n,
+ "<!doctype html><html><head><meta charset='utf-8'><meta name='viewport' content='width=device-width,initial-scale=1'>"
+ "<title>LabDAQ Control</title><style>body{font-family:system-ui;background:#0b1220;color:#e5e7eb;margin:0}header{padding:18px 24px;background:#111827}nav{display:flex;gap:8px;flex-wrap:wrap;padding:12px 24px}.tab{padding:9px 12px;background:#1f2937;border-radius:8px;cursor:pointer}.p{display:none;padding:20px 24px}.p.on{display:block}.g{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}.c{background:#111827;padding:16px;border-radius:12px}input,select,button{width:100%%;box-sizing:border-box;margin:5px 0;padding:9px;background:#1f2937;color:white;border:1px solid #374151;border-radius:7px}button{background:#059669;border:0}small{color:#9ca3af}</style></head>"
+ "<header><b>LabDAQ-Control</b> · STM32F407 · <small>16CH DAQ + Triaxial Cyclic Controller</small></header>"
+ "<nav><span class='tab' data-t='daq'>Data Logger</span><span class='tab' data-t='test'>Triaxial Tests</span><span class='tab' data-t='pid'>PID / EP Motors</span><span class='tab' data-t='channels'>Channels & Calibration</span><span class='tab' data-t='time'>Time</span><span class='tab' data-t='logs'>Logs</span><span class='tab' data-t='settings'>Settings</span></nav>"
+ "<section id='daq' class='p on'><h2>Data Logger</h2><div class='g'><div class='c'>Sample rate: <b>%lu Hz/ch</b><select><option>100</option><option>500</option><option selected>1000</option></select><button>Apply</button></div><div class='c'>Frames: %lu<br>Streaming: %s</div><div class='c'>Live scope/API endpoint<br><small>/api/sample?ch=N</small></div></div></section>"
+ "<section id='test' class='p'><h2>Triaxial / Cyclic Tests</h2><div class='g'><div class='c'><select><option>Cyclic triaxial</option><option>Monotonic</option><option>Stress controlled</option><option>Strain controlled</option><option>Custom profile</option></select><input placeholder='Confining pressure'><input placeholder='Axial target'><input placeholder='Frequency Hz'><input placeholder='Cycles'><button>Arm / Start</button></div><div class='c'>State: %d<br>Cycle: %lu / %lu<br><button>Pause</button><button>Emergency stop</button></div></div></section>"
+ "<section id='pid' class='p'><h2>PID & EP Motor Calibration</h2><div class='g'><div class='c'>EP Motor 1<input placeholder='Kp'><input placeholder='Ki'><input placeholder='Kd'><input placeholder='Setpoint'><button>Save PID</button></div><div class='c'>EP Motor 2<input placeholder='Kp'><input placeholder='Ki'><input placeholder='Kd'><input placeholder='Setpoint'><button>Save PID</button></div><div class='c'>Two-point calibration<input placeholder='Command min V'><input placeholder='Command max V'><input placeholder='Feedback min'><input placeholder='Feedback max'><button>Calibrate</button></div></div></section>"
+ "<section id='channels' class='p'><h2>16 Input Channels</h2><div class='c'>Each channel supports name, engineering unit, gain, offset, min/max and enable state.<br><small>SCPI: :CHAN:CAL ch,name,unit,gain,offset</small></div></section>"
+ "<section id='time' class='p'><h2>Clock & Time</h2><div class='c'>Unix time: <b>%lu</b><input type='datetime-local'><button>Set device time</button></div></section>"
+ "<section id='logs' class='p'><h2>Event Logs</h2><div class='c'>Stored events: <b>%u</b><br><small>Boot, configuration, calibration, PID, test start/stop/fault events.</small></div></section>"
+ "<section id='settings' class='p'><h2>Settings</h2><div class='g'><div class='c'>Acquisition: 100 / 500 / 1000 samples/s/ch</div><div class='c'>Network / UDP / filters</div><div class='c'>Safety limits and actuator commissioning</div></div></section>"
+ "<script>document.querySelectorAll('.tab').forEach(x=>x.onclick=()=>{document.querySelectorAll('.p').forEach(p=>p.classList.remove('on'));document.getElementById(x.dataset.t).classList.add('on')})</script></html>",
+ (unsigned long)sys->sampling_rate_hz,(unsigned long)sys->frame_sequence,sys->streaming_active?"ON":"OFF",(int)sys->test_state,(unsigned long)sys->cyclic_gen.current_cycle,(unsigned long)sys->cyclic_gen.target_cycles,(unsigned long)LABDAQ_Time_NowUnix(),g_labdaq_control.log_count);
 }
