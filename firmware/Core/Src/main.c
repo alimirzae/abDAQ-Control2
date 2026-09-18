@@ -153,7 +153,7 @@ int main(void)
         last_page_button = page_button;
 
         /* 6. Non-blocking staged heartbeat: LED speed identifies operating state. */
-        if (g_labdaq.test_state == LABDAQ_TEST_RUNNING) {
+        if (g_labdaq.test_state == TEST_STATE_RUNNING) {
             LABDAQ_Heartbeat_SetState(LABDAQ_HB_TEST_RUNNING);
         } else if (g_labdaq.streaming_active) {
             LABDAQ_Heartbeat_SetState(LABDAQ_HB_ACQUIRING);
