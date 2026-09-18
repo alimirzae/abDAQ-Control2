@@ -54,7 +54,7 @@ static void render(labdaq_system_t *s){
  LABDAQ_DisplayHW_EndFrame();
 }
 void LABDAQ_Display_Task(labdaq_system_t *s){
- if(!s)return;uint32_t now=HAL_GetTick();
+ if (!s) { return; }\n uint32_t now = HAL_GetTick();
  if(now-g_labdaq_display.last_refresh_ms<100U && !g_labdaq_display.dirty)return;
  g_labdaq_display.last_refresh_ms=now;
  uint8_t ch=g_labdaq_display.selected_channel;
