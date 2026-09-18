@@ -69,3 +69,12 @@ Any modifications or extensions to the digital signal conditioning pipeline in `
 - **SCPI**: Standard IEEE 488.2 query responses end in `\r\n`. Any query command must always return a deterministic response even upon error (`ERR: ...`).
 - **Modbus RTU**: Strict adherence to Modbus over serial line specification. Always compute and verify standard CRC16 (polynomial `0xA001`).
 - **Binary Streaming Frame**: Always preserve the 2-byte magic header `0xAA55` and 2-byte CRC16-CCITT trailer to allow stream re-synchronization over TCP sockets.
+
+---
+## 6. Triaxial controller extension rules
+- `labdaq_control.c/.h` owns runtime time/log/calibration/PID/experiment configuration; do not duplicate these states in HTTP handlers.
+- The release sampling targets are 100/500/1000 complete 16-channel frames/s. Any higher rate must be treated as experimental until measured.
+- Two EP outputs are 0–10 V command domains. Never enable physical PID output before hardware pin/timer mapping, polarity, feedback channel, E-stop and pressure relief are verified.
+- Every sensor channel has a human name, engineering unit, gain and offset. Test records must reference calibration metadata.
+- Network/UI work must never block the acquisition/PID hot path; no heap allocation or flash/SD writes inside real-time callbacks.
+- A successful link without `Reset_Handler` is NOT a valid firmware build. Release builds require a valid vector table and startup path.
