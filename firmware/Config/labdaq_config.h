@@ -2,7 +2,7 @@
  ******************************************************************************
  * @file    labdaq_config.h
  * @brief   Global configuration parameters for LabDAQ-Control system
- *          Hardware: EWB-STM32F407V-LAN-V3.0 + TXS0108E Level Shifter + MUX16
+ *          Hardware: EWB-STM32F407 Rev2.0 + 4.0-inch SPI LCD + external DAQ I/O
  ******************************************************************************
  */
 
@@ -26,7 +26,7 @@ extern "C" {
 #define LABDAQ_MANUFACTURER_STRING   "LabDAQ Instrumentation"
 
 /* ========================================================================== */
-/* Hardware Pin Mapping (EWB-STM32F407V-LAN-V3.0 + TXS0108E Level Shifter)   */
+/* Hardware Pin Mapping (EWB-STM32F407 Rev2.0 schematic)   */
 /* ========================================================================== */
 
 /* TXS0108E Level Shifter is connected to Header J1 (Port E high-byte)       */
@@ -57,21 +57,23 @@ extern "C" {
 
 /* On-board User LED and Pushbutton                                          */
 #define LABDAQ_LED_PORT              GPIOB
-#define LABDAQ_LED_PIN               GPIO_PIN_2    /* Board schematic: LED1 -> PB2 */
+#define LABDAQ_LED_PIN               GPIO_PIN_1    /* Rev2 schematic: LED1 net -> PB1 -> R3 -> red LED -> GND */
 #define LABDAQ_LCD_BL_PORT           GPIOB
-#define LABDAQ_LCD_BL_PIN            GPIO_PIN_1    /* BL_EN -> Q1 S8050, active HIGH */
+#define LABDAQ_LCD_BL_PIN            GPIO_PIN_0    /* Rev2 schematic: BL_EN -> PB0 -> Q1 S8050, active HIGH */
 #define LABDAQ_LCD_CS_PORT           GPIOD
-#define LABDAQ_LCD_CS_PIN            GPIO_PIN_13
+#define LABDAQ_LCD_CS_PIN            GPIO_PIN_13   /* LCD_CS */
 #define LABDAQ_LCD_RST_PORT          GPIOD
-#define LABDAQ_LCD_RST_PIN           GPIO_PIN_14
+#define LABDAQ_LCD_RST_PIN           GPIO_PIN_14   /* LCD_RST */
 #define LABDAQ_LCD_DC_PORT           GPIOD
-#define LABDAQ_LCD_DC_PIN            GPIO_PIN_15
+#define LABDAQ_LCD_DC_PIN            GPIO_PIN_15   /* LCD_DC */
 #define LABDAQ_LCD_SPI_SCK_PORT      GPIOA
-#define LABDAQ_LCD_SPI_SCK_PIN       GPIO_PIN_5
+#define LABDAQ_LCD_SPI_SCK_PIN       GPIO_PIN_5    /* SPI1_CLK */
 #define LABDAQ_LCD_SPI_MISO_PORT     GPIOA
-#define LABDAQ_LCD_SPI_MISO_PIN      GPIO_PIN_6
+#define LABDAQ_LCD_SPI_MISO_PIN      GPIO_PIN_6    /* SPI1_MISO */
 #define LABDAQ_LCD_SPI_MOSI_PORT     GPIOB
-#define LABDAQ_LCD_SPI_MOSI_PIN      GPIO_PIN_5
+#define LABDAQ_LCD_SPI_MOSI_PIN      GPIO_PIN_5    /* SPI1_MOSI */
+#define LABDAQ_LCD_WIDTH             480U
+#define LABDAQ_LCD_HEIGHT            320U
 #define LABDAQ_BTN_PORT              GPIOA
 #define LABDAQ_BTN_PIN               GPIO_PIN_0    /* PA0 WAKEUP */
 
