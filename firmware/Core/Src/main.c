@@ -284,7 +284,6 @@ static void MX_USART1_UART_Init(void)
     huart1.Init.Mode = UART_MODE_TX_RX;
     huart1.Init.HwFlowCtl = UART_HWCONTROL_NONE;
     huart1.Init.OverSampling = UART_OVERSAMPLING_16;
-    huart1.AdvancedInit.AdvFeatureInit = UART_ADVFEATURE_NO_INIT;
     g_debug_stage = 51U;
     if (HAL_UART_Init(&huart1) != HAL_OK) {
         g_debug_error = 0xAA01U;
@@ -315,7 +314,6 @@ static void MX_USART2_UART_Init(void)
     huart2.Init.Mode = UART_MODE_TX_RX;
     huart2.Init.HwFlowCtl = UART_HWCONTROL_NONE;
     huart2.Init.OverSampling = UART_OVERSAMPLING_16;
-    huart2.AdvancedInit.AdvFeatureInit = UART_ADVFEATURE_NO_INIT;
     g_debug_stage = 61U;
     if (HAL_UART_Init(&huart2) != HAL_OK) {
         g_debug_error = 0xAA02U;
