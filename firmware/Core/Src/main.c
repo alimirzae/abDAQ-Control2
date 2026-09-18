@@ -17,6 +17,7 @@
 #include <string.h>
 #include "labdaq_control.h"
 #include "labdaq_display.h"
+#include "labdaq_heartbeat.h"
 
 /* Global Master System Instance */
 labdaq_system_t g_labdaq;
@@ -48,6 +49,8 @@ int main(void)
 
     /* Initialize Peripherals and GPIOs */
     MX_GPIO_Init();
+    LABDAQ_Heartbeat_Init();
+    LABDAQ_Heartbeat_SetState(LABDAQ_HB_INIT);
     MX_USART1_UART_Init();
     MX_USART2_UART_Init();
 
@@ -76,8 +79,8 @@ int main(void)
 
     /* Start Continuous Acquisition by default */
     LABDAQ_System_StartAcquisition(&g_labdaq);
+    LABDAQ_Heartbeat_SetState(LABDAQ_HB_ACQUIRING);
 
-    uint32_t last_status_blink = 0;
     uint32_t last_sync_step = 0;
     uint32_t last_udp_telemetry_tick = 0;
 
@@ -149,11 +152,15 @@ int main(void)
         }
         last_page_button = page_button;
 
-        /* 5. Heartbeat LED Blink (every 500ms) */
-        if (now - last_status_blink >= 500) {
-            last_status_blink = now;
-            HAL_GPIO_TogglePin(LABDAQ_LED_PORT, LABDAQ_LED_PIN);
+        /* 6. Non-blocking staged heartbeat: LED speed identifies operating state. */
+        if (g_labdaq.test_state == LABDAQ_TEST_RUNNING) {
+            LABDAQ_Heartbeat_SetState(LABDAQ_HB_TEST_RUNNING);
+        } else if (g_labdaq.streaming_active) {
+            LABDAQ_Heartbeat_SetState(LABDAQ_HB_ACQUIRING);
+        } else {
+            LABDAQ_Heartbeat_SetState(LABDAQ_HB_READY);
         }
+        LABDAQ_Heartbeat_Task(now);
     }
 }
 
@@ -269,10 +276,6 @@ static void MX_GPIO_Init(void)
 
 void Error_Handler(void)
 {
-    __disable_irq();
-    while (1) {
-        /* Rapid blink error LED */
-        HAL_GPIO_TogglePin(LABDAQ_LED_PORT, LABDAQ_LED_PIN);
-        for (volatile int i = 0; i < 500000; i++);
-    }
+    /* Keep SysTick alive so the distinctive fault blink remains visible. */
+    LABDAQ_Heartbeat_FaultBlocking();
 }
